@@ -1,31 +1,22 @@
-# Salty Legendz - Raidreport Lite
+# Salty Legendz – Clan Raidübersicht (Lite)
 
-**Private Raid-Statistik-Übersicht** für Destiny 2 Clan-Mitglieder der Salty Legendz. Angepasstes Frontend ähnlich wie raid.report – gehostet via GitHub Pages.
+Ein einfacher Überblick über Raid-Clears deines Destiny 2 Clans.
 
-## 📦 Features
+## 🎯 Features
+- Darstellung aller Clan-Mitglieder
+- Anzeige: Wer hat welchen Raid **normal** gecleart
+- Dynamische Auswahl über Buttons (ähnlich wie raid.report)
+- Keine Zeit/Kills – reine Clear-Liste
+- Gehostet über GitHub Pages
 
-- Raid-Kills pro Clan-Mitglied als Balkendiagramm (Chart.js)
-- Übersichtstabelle mit Clears je Raid (Dummy-Daten, API-ready)
-- Mobile-responsive Layout mit Tailwind CSS
-- Bereit für Integration der Bungie API
-
-## 🚀 Nutzung / Deployment
-
-1. Repository forken oder ZIP hochladen
-2. GitHub Pages aktivieren:
-   - Settings → Pages → Source: `main` → `/ (root)`
-3. Web-App erreichbar unter: `https://<deinusername>.github.io/<repo-name>/`
-
-## 🧱 Struktur
-
-```
-├── index.html        # Hauptseite
-├── script.js         # Logik & Chart Rendering
-├── README.md         # Dokumentation
-```
+## 🚀 Nutzung
+1. Dieses Repository als ZIP hochladen oder forken
+2. `index.html` & `script.js` bearbeiten oder deployen
+3. GitHub Pages aktivieren (`Settings > Pages > Source: main / root`)
 
 ## 🔮 Nächste Schritte
+- Bungie API-Anbindung für Live-Daten
+- Raid-Filter erweitern (Challenges, Kills)
+- Suche & Sortierfunktionen
 
-- [ ] Bungie API Anbindung für Echtzeitdaten
-- [ ] Authentifizierung mit Clan-Zugang
-- [ ] Raid-Filter, Challenges & wöchentliche Auswertung
+## 🏷️ Clan: Salty Legendz
