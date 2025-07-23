@@ -1,45 +1,29 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <title>Destiny 2 Raid Report Lite</title>
+  <meta charset="UTF-8">
+  <title>Salty Originalz - Raid Report Lite</title>
+  <script defer src="script.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 2em; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 0.5em; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #ffffff;
+      padding: 2rem;
+    }
+    h1 {
+      color: #ffd700;
+    }
+    .guardian {
+      margin: 0.5rem 0;
+      padding: 0.5rem;
+      background: #1e1e1e;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
-  <h1>Salty Legendz - Gläserne Kammer Abschlüsse</h1>
-  <table id="clanTable">
-    <thead>
-      <tr>
-        <th>Bungie Name</th>
-        <th>Vault of Glass Abschlüsse</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <script>
-    const apiBase = 'https://DEIN-BACKEND-URL/clan';
-
-    async function fetchClanData() {
-      const res = await fetch(`${apiBase}/members`);
-      const data = await res.json();
-
-      const tbody = document.querySelector('#clanTable tbody');
-      for (const member of data.members) {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${member.bungieName}</td>
-          <td>Wird geladen...</td>
-        `;
-        tbody.appendChild(row);
-      }
-    }
-
-    fetchClanData();
-  </script>
+  <h1>Salty Originalz – Raid Report Lite</h1>
+  <div id="output">Lade Clan-Mitglieder...</div>
 </body>
 </html>
