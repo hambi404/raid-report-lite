@@ -1,47 +1,72 @@
-// Dummy-Daten simulieren Clan-Mitglieder und Raid-Clears
-const dummyData = [
-  { name: 'Spieler1', clears: ['Last Wish', 'Deep Stone Crypt'] },
-  { name: 'Spieler2', clears: ['Root of Nightmares'] },
-  { name: 'Spieler3', clears: ['Last Wish', 'Root of Nightmares'] },
-  { name: 'Spieler4', clears: ['Deep Stone Crypt'] },
-  { name: 'Spieler5', clears: [] }
+// script.js
+
+// Beispiel-Daten (Dummy-Daten, später via Bungie API ersetzen)
+const raidStats = [
+  { name: 'Spieler1', lastWish: 5, dsc: 12, root: 7 },
+  { name: 'Spieler2', lastWish: 2, dsc: 7, root: 3 },
+  { name: 'Spieler3', lastWish: 8, dsc: 10, root: 5 }
 ];
 
-const raids = ['Last Wish', 'Deep Stone Crypt', 'Root of Nightmares'];
-
-// Dynamisch Buttons erzeugen
-const raidSelection = document.getElementById('raidSelection');
-raids.forEach(raid => {
-  const btn = document.createElement('button');
-  btn.textContent = raid;
-  btn.className = 'bg-gray-700 hover:bg-indigo-600 transition text-white font-medium py-3 px-4 rounded-lg shadow';
-  btn.onclick = () => showClearedMembers(raid);
-  raidSelection.appendChild(btn);
+// Chart.js Setup
+const ctx = document.getElementById('raidChart').getContext('2d');
+const labels = raidStats.map(player => player.name);
+const raidChart = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: labels,
+    datasets: [
+      {
+        label: 'Last Wish',
+        data: raidStats.map(p => p.lastWish),
+        backgroundColor: '#f87171'
+      },
+      {
+        label: 'Deep Stone Crypt',
+        data: raidStats.map(p => p.dsc),
+        backgroundColor: '#60a5fa'
+      },
+      {
+        label: 'Root of Nightmares',
+        data: raidStats.map(p => p.root),
+        backgroundColor: '#34d399'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' },
+      title: { display: true, text: 'Raid-Kills pro Mitglied' }
+    }
+  }
 });
 
-function showClearedMembers(raid) {
-  const container = document.getElementById('memberList');
-  container.innerHTML = ''; // Leeren
+// Tabelle für Clears pro Raid generieren
+function renderRaidTable(data) {
+  const table = document.createElement('table');
+  table.className = 'min-w-full bg-gray-800 border border-gray-700 text-sm';
 
-  const title = document.createElement('h2');
-  title.className = 'text-2xl font-semibold mb-4';
-  title.textContent = `Raid: ${raid}`;
-  container.appendChild(title);
+  const header = `
+    <thead class="bg-gray-700">
+      <tr>
+        <th class="p-2 border">Name</th>
+        <th class="p-2 border">Last Wish</th>
+        <th class="p-2 border">Deep Stone Crypt</th>
+        <th class="p-2 border">Root of Nightmares</th>
+      </tr>
+    </thead>
+  `;
+  const rows = data.map(p => `
+    <tr>
+      <td class="p-2 border">${p.name}</td>
+      <td class="p-2 border text-center">${p.lastWish}</td>
+      <td class="p-2 border text-center">${p.dsc}</td>
+      <td class="p-2 border text-center">${p.root}</td>
+    </tr>
+  `).join('');
 
-  const list = document.createElement('ul');
-  list.className = 'space-y-2';
-
-  const filtered = dummyData.filter(player => player.clears.includes(raid));
-  if (filtered.length === 0) {
-    list.innerHTML = '<li class="text-gray-400">Niemand hat diesen Raid gecleart.</li>';
-  } else {
-    filtered.forEach(player => {
-      const li = document.createElement('li');
-      li.className = 'bg-gray-800 p-3 rounded-md shadow border border-gray-700';
-      li.textContent = player.name;
-      list.appendChild(li);
-    });
-  }
-
-  container.appendChild(list);
+  table.innerHTML = header + `<tbody>${rows}</tbody>`;
+  document.getElementById('raidTable').appendChild(table);
 }
+
+renderRaidTable(raidStats);
