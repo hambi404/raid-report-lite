@@ -21,6 +21,6 @@ Visit [**GitHub Pages**](https://hambi404.github.io/raid-report-lite/) and bask 
 
 ## 🤘 Credits
 - **Idea & chaos:** Hambi.  
-- **Code:** Red Bull, Bash & a bit of magic.  
+- **Code:** Red Bull, python & a bit of magic.  
 
 © **Hambi rocks** – 2025
