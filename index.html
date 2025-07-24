@@ -2,28 +2,13 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Salty Originalz - Raid Report Lite</title>
-  <script defer src="script.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #121212;
-      color: #ffffff;
-      padding: 2rem;
-    }
-    h1 {
-      color: #ffd700;
-    }
-    .guardian {
-      margin: 0.5rem 0;
-      padding: 0.5rem;
-      background: #1e1e1e;
-      border-radius: 8px;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clan Vault of Glass Stats</title>
+  <script defer src="app.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
-  <h1>Salty Originalz – Raid Report Lite</h1>
-  <div id="output">Lade Clan-Mitglieder...</div>
+<body class="bg-gray-900 text-white min-h-screen p-6">
+  <h1 class="text-3xl font-bold mb-6">Vault of Glass Abschlüsse</h1>
+  <div id="clan-container" class="grid gap-4"></div>
 </body>
 </html>
