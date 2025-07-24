@@ -1,14 +1,73 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Clan Vault of Glass Stats</title>
-  <script defer src="app.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Destiny 2 Clan-Mitglieder</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 1rem; }
+    ul { list-style: none; padding: 0; }
+    li { padding: .5rem .75rem; border-bottom: 1px solid #ccc3; }
+    .muted { opacity: .6; font-size: .9rem; }
+  </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen p-6">
-  <h1 class="text-3xl font-bold mb-6">Vault of Glass Abschlüsse</h1>
-  <div id="clan-container" class="grid gap-4"></div>
+<body>
+  <h1>Clan-Mitglieder</h1>
+  <p class="muted">Lädt live aus der Bungie API …</p>
+  <ul id="members"></ul>
+
+  <script>
+    // >>>>> HIER EINTRAGEN <<<<<
+    const API_KEY  = "585402d32f384078b03bd0cfe9ecf9b6";
+    const GROUP_ID = "4901284";
+
+    const BASE_URL = "https://www.bungie.net/Platform";
+
+    async function fetchJSON(url) {
+      const res = await fetch(url, { headers: { "X-API-Key": API_KEY } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.ErrorStatus !== "Success") throw new Error(data.Message || "API-Fehler");
+      return data.Response;
+    }
+
+    function displayName(m) {
+      return (
+        m.bungieNetUserInfo?.bungieGlobalDisplayName ??
+        m.destinyUserInfo?.displayName ??
+        "Unbekannt"
+      );
+    }
+
+    async function loadMembers() {
+      const list = document.getElementById("members");
+      list.innerHTML = "<li class='muted'>Laden …</li>";
+
+      try {
+        const resp = await fetchJSON(`${BASE_URL}/GroupV2/${GROUP_ID}/Members/`);
+        const members = resp.results
+          .map(displayName)
+          .sort((a, b) => a.localeCompare(b));
+
+        list.innerHTML = "";
+        for (const name of members) {
+          const li = document.createElement("li");
+          li.textContent = name;
+          list.appendChild(li);
+        }
+
+        if (members.length === 0) {
+          list.innerHTML = "<li class='muted'>Keine Mitglieder gefunden.</li>";
+        }
+      } catch (e) {
+        list.innerHTML = `<li class='muted'>Fehler: ${e.message}</li>`;
+        console.error(e);
+      }
+    }
+
+    loadMembers();
+  </script>
 </body>
 </html>
