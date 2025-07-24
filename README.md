@@ -1,31 +1,26 @@
-# Salty Legendz - Raidreport Lite
+# 🛡️ Destiny 2 Raid Clears – Hambi Rocks
 
-**Private Raid-Statistik-Übersicht** für Destiny 2 Clan-Mitglieder der Salty Legendz. Angepasstes Frontend ähnlich wie raid.report – gehostet via GitHub Pages.
+Welcome to **Hambi’s Raid Leaderboard™** – where Guardians are ranked by pure raid dedication.  
+(Yes, *Hambi rocks.*)
+Visit [**GitHub Pages**](https://hambi404.github.io/raid-report-lite/) and bask in the glory of the leaderboard.
+---
 
-## 📦 Features
+## ✨ Features
+- **Super fast data** (under 3s – faster than your raid wipe).  
+- **Modern & responsive UI** – works on PC and mobile.  
+- **Raid clear counts** – no fluff, just the truth.
 
-- Raid-Kills pro Clan-Mitglied als Balkendiagramm (Chart.js)
-- Übersichtstabelle mit Clears je Raid (Dummy-Daten, API-ready)
-- Mobile-responsive Layout mit Tailwind CSS
-- Bereit für Integration der Bungie API
+---
 
-## 🚀 Nutzung / Deployment
+## 🚀 How It Works
+1. Data is fetched via Bungie API → `results.json`.  
+2. GitHub Pages displays the names + clears beautifully.  
+3. Mobile-friendly – check your stats on the go.
 
-1. Repository forken oder ZIP hochladen
-2. GitHub Pages aktivieren:
-   - Settings → Pages → Source: `main` → `/ (root)`
-3. Web-App erreichbar unter: `https://<deinusername>.github.io/<repo-name>/`
+---
 
-## 🧱 Struktur
+## 🤘 Credits
+- **Idea & chaos:** Hambi.  
+- **Code:** Red Bull, Bash & a bit of magic.  
 
-```
-├── index.html        # Hauptseite
-├── script.js         # Logik & Chart Rendering
-├── README.md         # Dokumentation
-```
-
-## 🔮 Nächste Schritte
-
-- [ ] Bungie API Anbindung für Echtzeitdaten
-- [ ] Authentifizierung mit Clan-Zugang
-- [ ] Raid-Filter, Challenges & wöchentliche Auswertung
+© **Hambi rocks** – 2025
