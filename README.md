@@ -1,7 +1,6 @@
-# 🛡️ Destiny 2 Raid Clears – Hambi Rocks
+# 🛡️ Destiny 2 Raid Clears
 
 Welcome to **Hambi’s Raid Leaderboard™** – where Guardians are ranked by pure raid dedication.  
-(Yes, *Hambi rocks.*)
 Visit [**GitHub Pages**](https://hambi404.github.io/raid-report-lite/) and bask in the glory of the leaderboard.
 ---
 
@@ -18,9 +17,5 @@ Visit [**GitHub Pages**](https://hambi404.github.io/raid-report-lite/) and bask 
 3. Mobile-friendly – check your stats on the go.
 
 ---
-
-## 🤘 Credits
-- **Idea & chaos:** Hambi.  
-- **Code:** Red Bull, python & a bit of magic.  
 
 © **Hambi rocks** – 2025
