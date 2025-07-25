@@ -20,8 +20,8 @@
     <!-- Tiles -->
     <section id="tiles" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10"></section>
 
-    <!-- Controls (nur in Detailansicht sichtbar) -->
-    <section id="controls" class="hidden sm:flex flex-col sm:flex-row gap-3 sm:items-center mb-4">
+    <!-- Controls (werden per JS nur in Detailansicht eingeblendet) -->
+    <section id="controls" class="hidden gap-3 items-center mb-4 flex-wrap">
       <input id="search" type="text"
         class="w-full sm:w-72 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
         placeholder="Spieler suchen…" />
@@ -61,12 +61,12 @@
 
   <script>
     const DATA_URL = 'results.json';
-    const TOP_N = 3; // <— hier stellst du Top-N ein
+    const TOP_N = 3;
 
     let fullData = null;
-    let currentRaid = null; // null => Übersicht, 'ALL' => total, otherwise raid hash string
+    let currentRaid = null; // null => Übersicht, 'ALL' => total, sonst raid hash
     let sortDesc = true;
-    let viewList = []; // aktuell gefilterte/gerenderte Daten
+    let viewList = [];
 
     const $ = s => document.querySelector(s);
 
@@ -91,10 +91,10 @@
       $('#updated').textContent = `Stand: ${new Date(fullData.generated_at || Date.now()).toLocaleString()}`;
 
       buildTiles();
-      route(); // initialer Zustand
+      route(); // initial
       window.addEventListener('popstate', route);
 
-      // Controls-Events – werden nur effektiv genutzt, wenn Detail-Ansicht aktiv
+      // Events – wirken nur in Detailansicht
       $('#sort-btn').addEventListener('click', () => {
         sortDesc = !sortDesc;
         $('#sort-btn').textContent = `Nach Clears sortieren (${sortDesc ? '▼' : '▲'})`;
@@ -120,7 +120,7 @@
       const tiles = $('#tiles');
       tiles.innerHTML = '';
 
-      // "Alle Raids" Karte – hier OHNE Top 3 (du kannst sie optional hinzufügen)
+      // "Alle Raids" Karte
       const allCard = document.createElement('a');
       allCard.href = `?raid=ALL`;
       allCard.className =
@@ -131,7 +131,7 @@
       `;
       tiles.appendChild(allCard);
 
-      // Für jeden Raid: Top-N Liste
+      // Raid-Kacheln mit Top-N
       for (const [hash, meta] of Object.entries(fullData.raids)) {
         const totalClears = fullData.members.reduce((acc, m) => acc + (m.completions[hash] || 0), 0);
 
@@ -166,24 +166,35 @@
       }
     }
 
+    function showControls(show) {
+      const controls = $('#controls');
+      if (show) {
+        controls.classList.remove('hidden');
+        controls.classList.add('flex');
+        $('#back-link').classList.remove('hidden');
+      } else {
+        controls.classList.add('hidden');
+        controls.classList.remove('flex');
+        $('#back-link').classList.add('hidden');
+      }
+    }
+
     function route() {
       const params = new URLSearchParams(location.search);
       const raid = params.get('raid'); // 'ALL' oder hash oder null
       currentRaid = raid;
 
       if (!raid) {
-        // Übersicht: Controls AUS, Tabelle AUS
+        // Übersicht
         $('#tiles').classList.remove('hidden');
-        $('#controls').classList.add('hidden');
+        showControls(false);
         $('#table-section').classList.add('hidden');
-        $('#back-link').classList.add('hidden');
         document.title = 'Destiny 2 – Raid Clears';
       } else {
-        // Detail: Controls AN, Tabelle AN
+        // Detail
         $('#tiles').classList.add('hidden');
-        $('#controls').classList.remove('hidden');
+        showControls(true);
         $('#table-section').classList.remove('hidden');
-        $('#back-link').classList.remove('hidden');
         renderTable();
       }
     }
