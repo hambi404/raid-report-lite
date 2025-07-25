@@ -3,53 +3,56 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Destiny 2 – Raid Clears | Hambi rocks</title>
-
-  <!-- Tailwind CDN -->
+  <title>Destiny 2 – Raid Clears</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
   <meta name="color-scheme" content="light dark" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2216%22>🛡️</text></svg>">
-  <style>
-    /* Smooth table overflow on mobile */
-    .table-wrapper { overflow-x: auto; }
-  </style>
+  <style>.table-wrapper{overflow-x:auto}</style>
 </head>
 <body class="h-full bg-white text-slate-800 dark:bg-slate-900 dark:text-slate-100">
-  <header class="max-w-4xl mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold tracking-tight">Destiny 2 – Vault of Glass Clears</h1>
+  <header class="max-w-5xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold tracking-tight">Destiny 2 – Raid Clears</h1>
     <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-      Live aus <code>results.json</code> geladen • <span id="updated"></span>
+      Live aus <code>results.json</code> • <span id="updated"></span>
     </p>
+  </header>
 
-    <div class="mt-6 flex flex-col sm:flex-row gap-3 sm:items-center">
+  <main class="max-w-5xl mx-auto px-4 pb-24">
+    <!-- Tiles -->
+    <section id="tiles" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10"></section>
+
+    <!-- Controls -->
+    <section id="controls" class="hidden sm:flex flex-col sm:flex-row gap-3 sm:items-center mb-4">
       <input id="search" type="text"
-             class="w-full sm:w-72 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-             placeholder="Spieler suchen…" />
+        class="w-full sm:w-72 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+        placeholder="Spieler suchen…" />
       <button id="sort-btn"
-              class="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800">
+        class="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800">
         Nach Clears sortieren (▼)
       </button>
       <button id="download-csv"
-              class="rounded-md border border-emerald-400 text-emerald-600 dark:text-emerald-300 dark:border-emerald-900 px-3 py-2 text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
+        class="rounded-md border border-emerald-400 text-emerald-600 dark:text-emerald-300 dark:border-emerald-900 px-3 py-2 text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
         CSV herunterladen
       </button>
-    </div>
-  </header>
+      <a href="./" id="back-link"
+        class="ml-auto text-sm text-slate-500 hover:underline hidden">← Zur Übersicht</a>
+    </section>
 
-  <main class="max-w-4xl mx-auto px-4 pb-24">
-    <div class="table-wrapper rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
-      <table class="min-w-full text-sm">
-        <thead class="bg-slate-50 dark:bg-slate-800/50">
-          <tr>
-            <th class="text-left px-4 py-2 font-semibold">Name</th>
-            <th class="text-right px-4 py-2 font-semibold">VoG Clears</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
-    <p id="count" class="text-xs text-slate-500 dark:text-slate-400 mt-2"></p>
+    <!-- Table -->
+    <section id="table-section" class="hidden">
+      <h2 id="raid-title" class="text-xl font-semibold mb-2"></h2>
+      <div class="table-wrapper rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 dark:bg-slate-800/50">
+            <tr>
+              <th class="text-left px-4 py-2 font-semibold">Name</th>
+              <th class="text-right px-4 py-2 font-semibold" id="th-clears">Clears</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <p id="count" class="text-xs text-slate-500 dark:text-slate-400 mt-2"></p>
+    </section>
   </main>
 
   <footer class="border-t border-slate-200 dark:border-slate-800 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
@@ -57,85 +60,167 @@
   </footer>
 
   <script>
-    const DATA_URL = 'results.json'; // ggf. anpassen
-    let data = [];
+    const DATA_URL = 'results.json';
+    let fullData = null;
+    let currentRaid = null; // null => Übersicht, 'ALL' => total, otherwise raid hash string
     let sortDesc = true;
+    let viewList = []; // aktuell gefilterte/gerenderte Daten
 
-    const $ = (s) => document.querySelector(s);
-    const $$ = (s) => Array.from(document.querySelectorAll(s));
-
-    function render(list) {
-      const tbody = $('#tbody');
-      tbody.innerHTML = '';
-      for (const row of list) {
-        const tr = document.createElement('tr');
-        tr.className = 'border-b border-slate-100 dark:border-slate-800';
-        tr.innerHTML = `
-          <td class="px-4 py-2 whitespace-nowrap">${escapeHtml(row.name)}</td>
-          <td class="px-4 py-2 text-right font-mono">${row.vog_completions}</td>
-        `;
-        tbody.appendChild(tr);
-      }
-      $('#count').textContent = `${list.length} Spieler angezeigt`;
-    }
+    const $ = s => document.querySelector(s);
 
     function escapeHtml(str) {
-      return str.replace(/[&<>"']/g, m => ({
+      return String(str).replace(/[&<>"']/g, m => ({
         '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
       }[m]));
     }
 
-    function toCSV(list) {
-      const header = 'name,vog_completions';
+    function toCSV(list, key) {
+      const header = `name,${key}`;
       const lines = list.map(r =>
-        `"${String(r.name).replace(/"/g, '""')}",${r.vog_completions}`
+        `"${String(r.name).replace(/"/g, '""')}",${r[key]}`
       );
       return [header, ...lines].join('\n');
     }
 
     async function init() {
       const res = await fetch(DATA_URL, { cache: 'no-store' });
-      data = await res.json();
-      sortData();
-      render(data);
+      fullData = await res.json();
+      $('#year').textContent = new Date().getFullYear();
+      $('#updated').textContent = `Stand: ${new Date(fullData.generated_at || Date.now()).toLocaleString()}`;
+
+      buildTiles();
+      route(); // initialer Zustand
+      window.addEventListener('popstate', route);
 
       $('#sort-btn').addEventListener('click', () => {
         sortDesc = !sortDesc;
         $('#sort-btn').textContent = `Nach Clears sortieren (${sortDesc ? '▼' : '▲'})`;
-        sortData();
-        render(filtered($('#search').value));
+        renderTable();
       });
 
-      $('#search').addEventListener('input', (e) => {
-        render(filtered(e.target.value));
-      });
+      $('#search').addEventListener('input', () => renderTable());
 
       $('#download-csv').addEventListener('click', () => {
-        const csv = toCSV(filtered($('#search').value));
+        const key = currentRaid === 'ALL' ? 'total' : 'clears';
+        const csv = toCSV(viewList, key);
         const blob = new Blob([csv], {type: 'text/csv'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'vog_clears.csv';
+        a.download = (currentRaid === 'ALL' ? 'all_raids' : currentRaid) + '.csv';
         a.click();
         URL.revokeObjectURL(url);
       });
-
-      $('#year').textContent = new Date().getFullYear();
-      $('#updated').textContent = `Stand: ${new Date().toLocaleString()}`;
     }
 
-    function sortData() {
-      data.sort((a, b) => sortDesc
-        ? b.vog_completions - a.vog_completions
-        : a.vog_completions - b.vog_completions
-      );
+    function buildTiles() {
+      const tiles = $('#tiles');
+      tiles.innerHTML = '';
+
+      // "Alle Raids" Karte
+      const allCard = document.createElement('a');
+      allCard.href = `?raid=ALL`;
+      allCard.className =
+        'block rounded-lg bg-slate-50 dark:bg-slate-800 p-4 border border-slate-200 dark:border-slate-700 hover:shadow';
+      allCard.innerHTML = `
+        <h3 class="font-semibold text-lg mb-1">Alle Raids</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Gesamtsumme aller Clears</p>
+      `;
+      tiles.appendChild(allCard);
+
+      for (const [hash, meta] of Object.entries(fullData.raids)) {
+        const card = document.createElement('a');
+        card.href = `?raid=${hash}`;
+        card.className =
+          'block rounded-lg bg-slate-50 dark:bg-slate-800 p-4 border border-slate-200 dark:border-slate-700 hover:shadow';
+        const totalClears = fullData.members.reduce((acc, m) => acc + (m.completions[hash] || 0), 0);
+        card.innerHTML = `
+          <h3 class="font-semibold text-lg mb-1">${escapeHtml(meta.name)}</h3>
+          <p class="text-sm text-slate-500 dark:text-slate-400">${totalClears} Gesamt-Clears</p>
+        `;
+        tiles.appendChild(card);
+      }
     }
 
-    function filtered(query) {
-      query = query.trim().toLowerCase();
-      if (!query) return data;
-      return data.filter(r => r.name.toLowerCase().includes(query));
+    function route() {
+      const params = new URLSearchParams(location.search);
+      const raid = params.get('raid'); // 'ALL' oder hash oder null
+      currentRaid = raid;
+
+      if (!raid) {
+        // Übersicht
+        $('#tiles').classList.remove('hidden');
+        $('#controls').classList.add('hidden');
+        $('#table-section').classList.add('hidden');
+        $('#back-link').classList.add('hidden');
+        document.title = 'Destiny 2 – Raid Clears';
+      } else {
+        // Detail
+        $('#tiles').classList.add('hidden');
+        $('#controls').classList.remove('hidden');
+        $('#table-section').classList.remove('hidden');
+        $('#back-link').classList.remove('hidden');
+        renderTable();
+      }
+    }
+
+    function renderTable() {
+      const tbody = $('#tbody');
+      const search = $('#search').value.trim().toLowerCase();
+      const members = fullData.members;
+
+      let rows = [];
+
+      if (currentRaid === 'ALL') {
+        // Summe über alle Raids (total)
+        rows = members.map(m => ({
+          name: m.name,
+          total: m.total
+        }));
+        if (search) {
+          rows = rows.filter(r => r.name.toLowerCase().includes(search));
+        }
+        rows.sort((a, b) => sortDesc ? b.total - a.total : a.total - b.total);
+
+        $('#raid-title').textContent = 'Alle Raids – Gesamtsumme';
+        $('#th-clears').textContent = 'Total';
+        document.title = 'Alle Raids – Destiny 2 Clears';
+
+        viewList = rows;
+        tbody.innerHTML = rows.map(r => `
+          <tr class="border-b border-slate-100 dark:border-slate-800">
+            <td class="px-4 py-2 whitespace-nowrap">${escapeHtml(r.name)}</td>
+            <td class="px-4 py-2 text-right font-mono">${r.total}</td>
+          </tr>
+        `).join('');
+      } else {
+        // Einzelner Raid
+        const raidMeta = fullData.raids[currentRaid];
+        const raidName = raidMeta ? raidMeta.name : `Raid ${currentRaid}`;
+
+        rows = members.map(m => ({
+          name: m.name,
+          clears: (m.completions[currentRaid] || 0)
+        }));
+        if (search) {
+          rows = rows.filter(r => r.name.toLowerCase().includes(search));
+        }
+        rows.sort((a, b) => sortDesc ? b.clears - a.clears : a.clears - b.clears);
+
+        $('#raid-title').textContent = `${raidName}`;
+        $('#th-clears').textContent = 'Clears';
+        document.title = `${raidName} – Destiny 2 Clears`;
+
+        viewList = rows;
+        tbody.innerHTML = rows.map(r => `
+          <tr class="border-b border-slate-100 dark:border-slate-800">
+            <td class="px-4 py-2 whitespace-nowrap">${escapeHtml(r.name)}</td>
+            <td class="px-4 py-2 text-right font-mono">${r.clears}</td>
+          </tr>
+        `).join('');
+      }
+
+      $('#count').textContent = `${rows.length} Spieler angezeigt`;
     }
 
     init();
