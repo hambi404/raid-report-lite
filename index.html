@@ -20,7 +20,7 @@
     <!-- Tiles -->
     <section id="tiles" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10"></section>
 
-    <!-- Controls -->
+    <!-- Controls (nur in Detailansicht sichtbar) -->
     <section id="controls" class="hidden sm:flex flex-col sm:flex-row gap-3 sm:items-center mb-4">
       <input id="search" type="text"
         class="w-full sm:w-72 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
@@ -61,6 +61,8 @@
 
   <script>
     const DATA_URL = 'results.json';
+    const TOP_N = 3; // <— hier stellst du Top-N ein
+
     let fullData = null;
     let currentRaid = null; // null => Übersicht, 'ALL' => total, otherwise raid hash string
     let sortDesc = true;
@@ -92,13 +94,14 @@
       route(); // initialer Zustand
       window.addEventListener('popstate', route);
 
+      // Controls-Events – werden nur effektiv genutzt, wenn Detail-Ansicht aktiv
       $('#sort-btn').addEventListener('click', () => {
         sortDesc = !sortDesc;
         $('#sort-btn').textContent = `Nach Clears sortieren (${sortDesc ? '▼' : '▲'})`;
-        renderTable();
+        if (currentRaid) renderTable();
       });
 
-      $('#search').addEventListener('input', () => renderTable());
+      $('#search').addEventListener('input', () => currentRaid && renderTable());
 
       $('#download-csv').addEventListener('click', () => {
         const key = currentRaid === 'ALL' ? 'total' : 'clears';
@@ -117,7 +120,7 @@
       const tiles = $('#tiles');
       tiles.innerHTML = '';
 
-      // "Alle Raids" Karte
+      // "Alle Raids" Karte – hier OHNE Top 3 (du kannst sie optional hinzufügen)
       const allCard = document.createElement('a');
       allCard.href = `?raid=ALL`;
       allCard.className =
@@ -128,15 +131,36 @@
       `;
       tiles.appendChild(allCard);
 
+      // Für jeden Raid: Top-N Liste
       for (const [hash, meta] of Object.entries(fullData.raids)) {
+        const totalClears = fullData.members.reduce((acc, m) => acc + (m.completions[hash] || 0), 0);
+
+        const topN = fullData.members
+          .map(m => ({ name: m.name, clears: m.completions[hash] || 0 }))
+          .filter(p => p.clears > 0)
+          .sort((a, b) => b.clears - a.clears)
+          .slice(0, TOP_N);
+
         const card = document.createElement('a');
         card.href = `?raid=${hash}`;
         card.className =
           'block rounded-lg bg-slate-50 dark:bg-slate-800 p-4 border border-slate-200 dark:border-slate-700 hover:shadow';
-        const totalClears = fullData.members.reduce((acc, m) => acc + (m.completions[hash] || 0), 0);
+
+        const listHtml = topN.length
+          ? `<ol class="mt-3 space-y-1 text-sm">
+              ${topN.map((p, i) => `
+                <li class="flex justify-between">
+                  <span class="truncate">${i+1}. ${escapeHtml(p.name)}</span>
+                  <span class="font-mono">${p.clears}</span>
+                </li>
+              `).join('')}
+            </ol>`
+          : `<p class="mt-3 text-sm text-slate-400">Keine Clears</p>`;
+
         card.innerHTML = `
           <h3 class="font-semibold text-lg mb-1">${escapeHtml(meta.name)}</h3>
           <p class="text-sm text-slate-500 dark:text-slate-400">${totalClears} Gesamt-Clears</p>
+          ${listHtml}
         `;
         tiles.appendChild(card);
       }
@@ -148,14 +172,14 @@
       currentRaid = raid;
 
       if (!raid) {
-        // Übersicht
+        // Übersicht: Controls AUS, Tabelle AUS
         $('#tiles').classList.remove('hidden');
         $('#controls').classList.add('hidden');
         $('#table-section').classList.add('hidden');
         $('#back-link').classList.add('hidden');
         document.title = 'Destiny 2 – Raid Clears';
       } else {
-        // Detail
+        // Detail: Controls AN, Tabelle AN
         $('#tiles').classList.add('hidden');
         $('#controls').classList.remove('hidden');
         $('#table-section').classList.remove('hidden');
@@ -172,7 +196,6 @@
       let rows = [];
 
       if (currentRaid === 'ALL') {
-        // Summe über alle Raids (total)
         rows = members.map(m => ({
           name: m.name,
           total: m.total
@@ -194,7 +217,6 @@
           </tr>
         `).join('');
       } else {
-        // Einzelner Raid
         const raidMeta = fullData.raids[currentRaid];
         const raidName = raidMeta ? raidMeta.name : `Raid ${currentRaid}`;
 
