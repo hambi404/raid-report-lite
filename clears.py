@@ -23,7 +23,7 @@ RAIDS: Dict[int, str] = {
     107319834:  "Crota's End",
     156253568:  "Crota's End",
     1507509200: "Crota's End",
-    2381413764:  "Root of Nightmares",
+    2381413764: "Root of Nightmares",
     2918919505: "Root of Nightmares",
     3257594522: "Kingsfall",
     1374392663: "Kingsfall",
