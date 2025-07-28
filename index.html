@@ -27,7 +27,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     .table-wrapper { overflow-x: auto; }
-    .top-player { background-color: rgba(34,197,94,0.1); }
     ::selection { background-color: #C4B5FD; color: white; }
   </style>
 </head>
@@ -40,8 +39,10 @@
   </header>
 
   <main class="container mx-auto px-6 pb-24">
+    <!-- Tiles -->
     <section id="tiles" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 mb-12"></section>
 
+    <!-- Controls -->
     <section id="controls" class="hidden gap-3 items-center mb-8 flex-wrap">
       <input id="search" type="text"
         class="w-full sm:max-w-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-brand transition"
@@ -58,6 +59,7 @@
         class="ml-auto text-sm text-slate-500 hover:text-brand hover:underline hidden transition">← Zur Übersicht</a>
     </section>
 
+    <!-- Table -->
     <section id="table-section" class="hidden">
       <h2 id="raid-title" class="text-2xl font-semibold mb-4 border-b border-slate-200 dark:border-slate-700 pb-2"></h2>
       <div class="table-wrapper rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -82,36 +84,47 @@
   <script>
     const DATA_URL = 'results.json';
     const TOP_N = 3;
+
     let fullData = null;
     let currentRaid = null;
     let sortDesc = true;
     let viewList = [];
+
     const $ = s => document.querySelector(s);
 
     function escapeHtml(str) {
-      return String(str).replace(/[&<>"]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m]));
+      return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
     }
 
     function toCSV(list, key) {
       const header = `name,${key}`;
-      const lines = list.map(r => `"${r.name.replace(/"/g, '""')}",${r[key]}`);
+      const lines = list.map(r =>
+        `"${String(r.name).replace(/"/g, '""')}",${r[key]}`
+      );
       return [header, ...lines].join('\n');
     }
 
     async function init() {
       const res = await fetch(DATA_URL, { cache: 'no-store' });
       fullData = await res.json();
+
       $('#year').textContent = new Date().getFullYear();
       $('#updated').textContent = `Stand: ${new Date(fullData.generated_at || Date.now()).toLocaleString()}`;
+
       buildTiles();
       route();
       window.addEventListener('popstate', route);
+
       $('#sort-btn').addEventListener('click', () => {
         sortDesc = !sortDesc;
         $('#sort-btn').textContent = `Nach Clears sortieren (${sortDesc ? '▼' : '▲'})`;
         if (currentRaid) renderTable();
       });
+
       $('#search').addEventListener('input', () => currentRaid && renderTable());
+
       $('#download-csv').addEventListener('click', () => {
         const key = currentRaid === 'ALL' ? 'total' : 'clears';
         const csv = toCSV(viewList, key);
@@ -129,44 +142,44 @@
       const tiles = $('#tiles');
       tiles.innerHTML = '';
 
+      // "Alle Raids"-Kachel
       const allCard = document.createElement('a');
       allCard.href = `?raid=ALL`;
-      allCard.className = 'block rounded-xl bg-white dark:bg-slate-800 p-5 border border-slate-300 hover:shadow-xl transition';
+      allCard.className = 'block rounded-xl bg-white dark:bg-slate-800 p-5 border border-slate-200 dark:border-slate-700 hover:shadow transition';
       allCard.innerHTML = `
         <h3 class="font-semibold text-lg mb-1">Alle Raids</h3>
         <p class="text-sm text-slate-500 dark:text-slate-400">Gesamtsumme aller Clears</p>
       `;
       tiles.appendChild(allCard);
 
-      const raidActivity = [];
-      for (const [hash, meta] of Object.entries(fullData.raids)) {
+      // Reihung anhand der Reihenfolge in JSON
+      const orderedRaidHashes = Object.keys(fullData.raids);
+      for (const hash of orderedRaidHashes) {
+        const meta = fullData.raids[hash];
+
         const totalClears = fullData.members.reduce((acc, m) => acc + (m.completions[hash] || 0), 0);
-        raidActivity.push({ hash, meta, totalClears });
-      }
 
-      raidActivity.sort((a, b) => b.totalClears - a.totalClears);
-      const topThreshold = raidActivity.length >= 3 ? raidActivity[2].totalClears : 0;
-
-      for (const { hash, meta, totalClears } of raidActivity) {
-        const topN = fullData.members.map(m => ({ name: m.name, clears: m.completions[hash] || 0 }))
+        const topN = fullData.members
+          .map(m => ({ name: m.name, clears: m.completions[hash] || 0 }))
           .filter(p => p.clears > 0)
           .sort((a, b) => b.clears - a.clears)
+          .reverse()
           .slice(0, TOP_N);
-
-        const borderClass = totalClears >= topThreshold ? 'border-emerald-400' : totalClears > 0 ? 'border-slate-300' : 'border-slate-200 opacity-60';
 
         const card = document.createElement('a');
         card.href = `?raid=${hash}`;
-        card.className = `block rounded-xl bg-white dark:bg-slate-800 p-5 border ${borderClass} hover:shadow-xl transition`;
+        card.className = 'block rounded-xl bg-white dark:bg-slate-800 p-5 border border-slate-200 dark:border-slate-700 hover:shadow transition';
 
-        const listHtml = topN.length ? `
-          <ol class="mt-3 space-y-1 text-sm">
-            ${topN.map((p, i) => `
-              <li class="flex justify-between">
-                <span class="truncate">${i + 1}. ${escapeHtml(p.name)}</span>
-                <span class="font-mono">${p.clears}</span>
-              </li>`).join('')}
-          </ol>` : `<p class="mt-3 text-sm text-slate-400">Keine Clears</p>`;
+        const listHtml = topN.length
+          ? `<ol class="mt-3 space-y-1 text-sm">
+              ${topN.map((p, i) => `
+                <li class="flex justify-between">
+                  <span class="truncate">${i + 1}. ${escapeHtml(p.name)}</span>
+                  <span class="font-mono">${p.clears}</span>
+                </li>
+              `).join('')}
+            </ol>`
+          : `<p class="mt-3 text-sm text-slate-400">Keine Clears</p>`;
 
         card.innerHTML = `
           <h3 class="font-semibold text-lg mb-1">${escapeHtml(meta.name)}</h3>
@@ -179,9 +192,15 @@
 
     function showControls(show) {
       const controls = $('#controls');
-      controls.classList.toggle('hidden', !show);
-      controls.classList.toggle('flex', show);
-      $('#back-link').classList.toggle('hidden', !show);
+      if (show) {
+        controls.classList.remove('hidden');
+        controls.classList.add('flex');
+        $('#back-link').classList.remove('hidden');
+      } else {
+        controls.classList.add('hidden');
+        controls.classList.remove('flex');
+        $('#back-link').classList.add('hidden');
+      }
     }
 
     function route() {
@@ -208,9 +227,12 @@
       const members = fullData.members;
 
       let rows = [];
+
       if (currentRaid === 'ALL') {
         rows = members.map(m => ({ name: m.name, total: m.total }));
-        if (search) rows = rows.filter(r => r.name.toLowerCase().includes(search));
+        if (search) {
+          rows = rows.filter(r => r.name.toLowerCase().includes(search));
+        }
         rows.sort((a, b) => sortDesc ? b.total - a.total : a.total - b.total);
 
         $('#raid-title').textContent = 'Alle Raids – Gesamtsumme';
@@ -220,14 +242,21 @@
         viewList = rows;
         tbody.innerHTML = rows.map(r => `
           <tr class="border-b border-slate-100 dark:border-slate-800">
-            <td class="px-4 py-3 whitespace-nowrap">${escapeHtml(r.name)}</td>
-            <td class="px-4 py-3 text-right font-mono">${r.total}</td>
-          </tr>`).join('');
+            <td class="px-4 py-2 whitespace-nowrap">${escapeHtml(r.name)}</td>
+            <td class="px-4 py-2 text-right font-mono">${r.total}</td>
+          </tr>
+        `).join('');
       } else {
         const raidMeta = fullData.raids[currentRaid];
         const raidName = raidMeta ? raidMeta.name : `Raid ${currentRaid}`;
-        rows = members.map(m => ({ name: m.name, clears: m.completions[currentRaid] || 0 }));
-        if (search) rows = rows.filter(r => r.name.toLowerCase().includes(search));
+
+        rows = members.map(m => ({
+          name: m.name,
+          clears: (m.completions[currentRaid] || 0)
+        }));
+        if (search) {
+          rows = rows.filter(r => r.name.toLowerCase().includes(search));
+        }
         rows.sort((a, b) => sortDesc ? b.clears - a.clears : a.clears - b.clears);
 
         $('#raid-title').textContent = `${raidName}`;
@@ -235,11 +264,12 @@
         document.title = `${raidName} – Destiny 2 Clears`;
 
         viewList = rows;
-        tbody.innerHTML = rows.map((r, i) => `
-          <tr class="border-b border-slate-100 dark:border-slate-800 ${i < 3 ? 'top-player' : ''}">
-            <td class="px-4 py-3 whitespace-nowrap">${escapeHtml(r.name)}</td>
-            <td class="px-4 py-3 text-right font-mono">${r.clears}</td>
-          </tr>`).join('');
+        tbody.innerHTML = rows.map(r => `
+          <tr class="border-b border-slate-100 dark:border-slate-800">
+            <td class="px-4 py-2 whitespace-nowrap">${escapeHtml(r.name)}</td>
+            <td class="px-4 py-2 text-right font-mono">${r.clears}</td>
+          </tr>
+        `).join('');
       }
 
       $('#count').textContent = `${rows.length} Spieler angezeigt`;
