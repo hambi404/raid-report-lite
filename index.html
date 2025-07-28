@@ -6,43 +6,60 @@
   <title>Destiny 2 – Raid Clears</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <meta name="color-scheme" content="light dark" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              DEFAULT: '#7C3AED',
+              light: '#C4B5FD',
+              dark: '#4C1D95'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     .table-wrapper { overflow-x: auto; }
     .top-player { background-color: rgba(34,197,94,0.1); }
+    ::selection { background-color: #C4B5FD; color: white; }
   </style>
 </head>
-<body class="h-full bg-white text-slate-800 dark:bg-slate-900 dark:text-slate-100">
-  <header class="container mx-auto px-4 py-8">
-    <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">Destiny 2 – Raid Clears</h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-      Live aus <code>results.json</code> • <span id="updated"></span>
+<body class="h-full bg-gradient-to-b from-white to-slate-100 dark:from-slate-900 dark:to-slate-950 text-slate-800 dark:text-slate-100 font-sans">
+  <header class="container mx-auto px-6 py-10 text-center">
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-brand">Destiny 2 – Raid Clears</h1>
+    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+      Daten aus <code class="bg-slate-100 dark:bg-slate-800 px-1 rounded">results.json</code> • <span id="updated"></span>
     </p>
   </header>
 
-  <main class="container mx-auto px-4 pb-24">
-    <!-- Tiles -->
+  <main class="container mx-auto px-6 pb-24">
     <section id="tiles" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 mb-12"></section>
 
-    <!-- Controls -->
-    <section id="controls" class="hidden gap-3 items-center mb-6 flex-wrap">
+    <section id="controls" class="hidden gap-3 items-center mb-8 flex-wrap">
       <input id="search" type="text"
-        class="w-full sm:max-w-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm"
+        class="w-full sm:max-w-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-brand transition"
         placeholder="Spieler suchen…" />
       <button id="sort-btn"
-        class="rounded-lg border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+        class="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-medium bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
         Nach Clears sortieren (▼)
       </button>
       <button id="download-csv"
-        class="rounded-lg border border-emerald-400 text-emerald-600 dark:text-emerald-300 dark:border-emerald-800 px-4 py-2 text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition">
+        class="rounded-xl border border-brand text-brand px-4 py-2 text-sm font-medium bg-white dark:bg-slate-800 hover:bg-brand/10 transition">
         CSV herunterladen
       </button>
       <a href="./" id="back-link"
-        class="ml-auto text-sm text-slate-500 hover:underline hidden">← Zur Übersicht</a>
+        class="ml-auto text-sm text-slate-500 hover:text-brand hover:underline hidden transition">← Zur Übersicht</a>
     </section>
 
-    <!-- Table -->
     <section id="table-section" class="hidden">
-      <h2 id="raid-title" class="text-2xl font-semibold mb-3"></h2>
+      <h2 id="raid-title" class="text-2xl font-semibold mb-4 border-b border-slate-200 dark:border-slate-700 pb-2"></h2>
       <div class="table-wrapper rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <table class="min-w-full text-sm">
           <thead class="bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
@@ -58,32 +75,26 @@
     </section>
   </main>
 
-  <footer class="border-t border-slate-200 dark:border-slate-800 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
+  <footer class="border-t border-slate-200 dark:border-slate-800 py-8 text-center text-xs text-slate-500 dark:text-slate-400">
     © <span id="year"></span> Hambi rocks
   </footer>
 
   <script>
     const DATA_URL = 'results.json';
     const TOP_N = 3;
-
     let fullData = null;
     let currentRaid = null;
     let sortDesc = true;
     let viewList = [];
-
     const $ = s => document.querySelector(s);
 
     function escapeHtml(str) {
-      return String(str).replace(/[&<>"']/g, m => ({
-        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-      }[m]));
+      return String(str).replace(/[&<>"]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m]));
     }
 
     function toCSV(list, key) {
       const header = `name,${key}`;
-      const lines = list.map(r =>
-        `"${String(r.name).replace(/"/g, '""')}",${r[key]}`
-      );
+      const lines = list.map(r => `"${r.name.replace(/"/g, '""')}",${r[key]}`);
       return [header, ...lines].join('\n');
     }
 
@@ -95,15 +106,12 @@
       buildTiles();
       route();
       window.addEventListener('popstate', route);
-
       $('#sort-btn').addEventListener('click', () => {
         sortDesc = !sortDesc;
         $('#sort-btn').textContent = `Nach Clears sortieren (${sortDesc ? '▼' : '▲'})`;
         if (currentRaid) renderTable();
       });
-
       $('#search').addEventListener('input', () => currentRaid && renderTable());
-
       $('#download-csv').addEventListener('click', () => {
         const key = currentRaid === 'ALL' ? 'total' : 'clears';
         const csv = toCSV(viewList, key);
@@ -123,8 +131,7 @@
 
       const allCard = document.createElement('a');
       allCard.href = `?raid=ALL`;
-      allCard.className =
-        'block rounded-xl bg-white dark:bg-slate-800 p-5 border border-slate-200 dark:border-slate-700 hover:shadow-xl transition';
+      allCard.className = 'block rounded-xl bg-white dark:bg-slate-800 p-5 border border-slate-300 hover:shadow-xl transition';
       allCard.innerHTML = `
         <h3 class="font-semibold text-lg mb-1">Alle Raids</h3>
         <p class="text-sm text-slate-500 dark:text-slate-400">Gesamtsumme aller Clears</p>
@@ -132,40 +139,34 @@
       tiles.appendChild(allCard);
 
       const raidActivity = [];
-
       for (const [hash, meta] of Object.entries(fullData.raids)) {
         const totalClears = fullData.members.reduce((acc, m) => acc + (m.completions[hash] || 0), 0);
         raidActivity.push({ hash, meta, totalClears });
       }
 
       raidActivity.sort((a, b) => b.totalClears - a.totalClears);
-
       const topThreshold = raidActivity.length >= 3 ? raidActivity[2].totalClears : 0;
 
       for (const { hash, meta, totalClears } of raidActivity) {
-        const topN = fullData.members
-          .map(m => ({ name: m.name, clears: m.completions[hash] || 0 }))
+        const topN = fullData.members.map(m => ({ name: m.name, clears: m.completions[hash] || 0 }))
           .filter(p => p.clears > 0)
           .sort((a, b) => b.clears - a.clears)
           .slice(0, TOP_N);
 
-        const borderClass = totalClears >= topThreshold ? 'border-emerald-400' :
-                            totalClears > 0 ? 'border-slate-300' : 'border-slate-200 opacity-60';
+        const borderClass = totalClears >= topThreshold ? 'border-emerald-400' : totalClears > 0 ? 'border-slate-300' : 'border-slate-200 opacity-60';
 
         const card = document.createElement('a');
         card.href = `?raid=${hash}`;
         card.className = `block rounded-xl bg-white dark:bg-slate-800 p-5 border ${borderClass} hover:shadow-xl transition`;
 
-        const listHtml = topN.length
-          ? `<ol class="mt-3 space-y-1 text-sm">
-              ${topN.map((p, i) => `
-                <li class="flex justify-between">
-                  <span class="truncate">${i + 1}. ${escapeHtml(p.name)}</span>
-                  <span class="font-mono">${p.clears}</span>
-                </li>
-              `).join('')}
-            </ol>`
-          : `<p class="mt-3 text-sm text-slate-400">Keine Clears</p>`;
+        const listHtml = topN.length ? `
+          <ol class="mt-3 space-y-1 text-sm">
+            ${topN.map((p, i) => `
+              <li class="flex justify-between">
+                <span class="truncate">${i + 1}. ${escapeHtml(p.name)}</span>
+                <span class="font-mono">${p.clears}</span>
+              </li>`).join('')}
+          </ol>` : `<p class="mt-3 text-sm text-slate-400">Keine Clears</p>`;
 
         card.innerHTML = `
           <h3 class="font-semibold text-lg mb-1">${escapeHtml(meta.name)}</h3>
@@ -178,15 +179,9 @@
 
     function showControls(show) {
       const controls = $('#controls');
-      if (show) {
-        controls.classList.remove('hidden');
-        controls.classList.add('flex');
-        $('#back-link').classList.remove('hidden');
-      } else {
-        controls.classList.add('hidden');
-        controls.classList.remove('flex');
-        $('#back-link').classList.add('hidden');
-      }
+      controls.classList.toggle('hidden', !show);
+      controls.classList.toggle('flex', show);
+      $('#back-link').classList.toggle('hidden', !show);
     }
 
     function route() {
@@ -213,15 +208,9 @@
       const members = fullData.members;
 
       let rows = [];
-
       if (currentRaid === 'ALL') {
-        rows = members.map(m => ({
-          name: m.name,
-          total: m.total
-        }));
-        if (search) {
-          rows = rows.filter(r => r.name.toLowerCase().includes(search));
-        }
+        rows = members.map(m => ({ name: m.name, total: m.total }));
+        if (search) rows = rows.filter(r => r.name.toLowerCase().includes(search));
         rows.sort((a, b) => sortDesc ? b.total - a.total : a.total - b.total);
 
         $('#raid-title').textContent = 'Alle Raids – Gesamtsumme';
@@ -233,19 +222,12 @@
           <tr class="border-b border-slate-100 dark:border-slate-800">
             <td class="px-4 py-3 whitespace-nowrap">${escapeHtml(r.name)}</td>
             <td class="px-4 py-3 text-right font-mono">${r.total}</td>
-          </tr>
-        `).join('');
+          </tr>`).join('');
       } else {
         const raidMeta = fullData.raids[currentRaid];
         const raidName = raidMeta ? raidMeta.name : `Raid ${currentRaid}`;
-
-        rows = members.map(m => ({
-          name: m.name,
-          clears: (m.completions[currentRaid] || 0)
-        }));
-        if (search) {
-          rows = rows.filter(r => r.name.toLowerCase().includes(search));
-        }
+        rows = members.map(m => ({ name: m.name, clears: m.completions[currentRaid] || 0 }));
+        if (search) rows = rows.filter(r => r.name.toLowerCase().includes(search));
         rows.sort((a, b) => sortDesc ? b.clears - a.clears : a.clears - b.clears);
 
         $('#raid-title').textContent = `${raidName}`;
@@ -257,8 +239,7 @@
           <tr class="border-b border-slate-100 dark:border-slate-800 ${i < 3 ? 'top-player' : ''}">
             <td class="px-4 py-3 whitespace-nowrap">${escapeHtml(r.name)}</td>
             <td class="px-4 py-3 text-right font-mono">${r.clears}</td>
-          </tr>
-        `).join('');
+          </tr>`).join('');
       }
 
       $('#count').textContent = `${rows.length} Spieler angezeigt`;
