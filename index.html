@@ -163,7 +163,6 @@
           .map(m => ({ name: m.name, clears: m.completions[hash] || 0 }))
           .filter(p => p.clears > 0)
           .sort((a, b) => b.clears - a.clears)
-          .reverse()
           .slice(0, TOP_N);
 
         const card = document.createElement('a');
@@ -246,22 +245,26 @@
             <td class="px-4 py-2 text-right font-mono">${r.total}</td>
           </tr>
         `).join('');
+        $('#count').textContent = `${rows.length} Spieler`;
       } else {
-        const raidMeta = fullData.raids[currentRaid];
-        const raidName = raidMeta ? raidMeta.name : `Raid ${currentRaid}`;
+        const meta = fullData.raids[currentRaid];
+        if (!meta) {
+          tbody.innerHTML = `<tr><td colspan="2">Unbekannter Raid</td></tr>`;
+          $('#raid-title').textContent = 'Unbekannter Raid';
+          $('#count').textContent = '';
+          return;
+        }
+        let hash = currentRaid;
 
-        rows = members.map(m => ({
-          name: m.name,
-          clears: (m.completions[currentRaid] || 0)
-        }));
+        rows = members.map(m => ({ name: m.name, clears: m.completions[hash] || 0 }));
         if (search) {
           rows = rows.filter(r => r.name.toLowerCase().includes(search));
         }
         rows.sort((a, b) => sortDesc ? b.clears - a.clears : a.clears - b.clears);
 
-        $('#raid-title').textContent = `${raidName}`;
+        $('#raid-title').textContent = meta.name;
         $('#th-clears').textContent = 'Clears';
-        document.title = `${raidName} – Destiny 2 Clears`;
+        document.title = `${meta.name} – Destiny 2 Clears`;
 
         viewList = rows;
         tbody.innerHTML = rows.map(r => `
@@ -270,12 +273,11 @@
             <td class="px-4 py-2 text-right font-mono">${r.clears}</td>
           </tr>
         `).join('');
+        $('#count').textContent = `${rows.length} Spieler`;
       }
-
-      $('#count').textContent = `${rows.length} Spieler angezeigt`;
     }
 
-    init();
+    window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
