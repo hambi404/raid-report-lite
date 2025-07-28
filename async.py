@@ -8,22 +8,60 @@ from aiohttp import ClientSession, TCPConnector
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import orjson as json
 from datetime import datetime, timezone
+from collections import defaultdict, OrderedDict
 
 BASE = "https://www.bungie.net/Platform"
 
 # ---> Hier alle Raid-Hashes & Namen eintragen
 RAIDS: Dict[int, str] = {
+    1044919065: "The Desert Perpetual",
+    940375169:  "Salvation's Edge",
+    1541433876: "Salvation's Edge",
+    2192826039: "Salvation's Edge",
+    4129614942: "Salvation's Edge",
+    4179289725: "Crota's End",
+    1566480315: "Crota's End",
+    107319834:  "Crota's End",
+    156253568:  "Crota's End",
+    1507509200: "Crota's End",
     548750096:  "Root of Nightmares",
-    3881495763: "Vault of Glass",
+    2918919505: "Root of Nightmares",
+    3257594522: "Kingsfall",
     1374392663: "Kingsfall",
+    2897223272: "Kingsfall",
+    1661734046: "Kingsfall",
+    2906950631: "Vow of the Disciple",
+    1441982566: "Vow of the Disciple",
+    3889634515: "Vow of the Disciple",
+    4217492330: "Vow of the Disciple",
+    3881495763: "Vault of Glass",
+    1485585878: "Vault of Glass",
+    3022541210: "Vault of Glass",
+    3711931140: "Vault of Glass",
+    1681562271: "Vault of Glass",
+    3976949817: "Deep Stone Crypt",
+    910380154:  "Deep Stone Crypt",
+    1042180643: "Garden of Salvation",
+    3458480158: "Garden of Salvation",
+    2497200493: "Garden of Salvation",
+    2659723068: "Garden of Salvation",
+    3845997235: "Garden of Salvation",
     2122313384: "Last Wish",
+    1661734046: "Last Wish"
 }
+
+def group_hashes_by_name_ordered(raid_dict: Dict[int, str]) -> "OrderedDict[str, Set[int]]":
+    grouped = OrderedDict()
+    for h, name in raid_dict.items():
+        if name not in grouped:
+            grouped[name] = set()
+        grouped[name].add(h)
+    return grouped
 
 class BungieError(Exception):
     pass
 
 def dumps(o) -> bytes:
-    # erlaube non-str keys (zur Sicherheit) – wir serialisieren unten trotzdem selbst als str
     return json.dumps(o, option=json.OPT_NON_STR_KEYS)
 
 def loads(b) -> Any:
@@ -75,10 +113,6 @@ async def get_profile_characters(session: ClientSession, api_key: str, member: D
     return member, chars
 
 async def get_char_stats_multi(session: ClientSession, api_key: str, member: Dict[str, Any], char_id: str, raid_hashes: Set[int], sem: asyncio.Semaphore) -> Dict[int, int]:
-    """
-    Holt AggregateActivityStats EINMAL und liefert ein Dict raid_hash -> completions
-    für alle gewünschten Raids.
-    """
     headers = {"X-API-Key": api_key}
     url = f"{BASE}/Destiny2/{member['membershipType']}/Account/{member['membershipId']}/Character/{char_id}/Stats/AggregateActivityStats/"
     try:
@@ -100,10 +134,8 @@ async def main():
     parser.add_argument("--group-id", required=True)
     parser.add_argument("--out", default="results.json")
     parser.add_argument("--concurrency", type=int, default=150)
-    # Neue Option: mehrere Raids auf einmal (Default: alle bekannten)
-    parser.add_argument("--raid-hashes", nargs="*", type=int, help="Liste von Raid Hashes (default: alle bekannten)")
-    # Für Rückwärtskompatibilität: einzelner Hash (optional, wenn jemand's gewohnt ist)
-    parser.add_argument("--raid-hash", type=int, help="Einzelner Raid Hash (deprecated, nutze --raid-hashes)")
+    parser.add_argument("--raid-hashes", nargs="*", type=int)
+    parser.add_argument("--raid-hash", type=int)
     args = parser.parse_args()
 
     if args.raid_hashes:
@@ -112,6 +144,8 @@ async def main():
         raid_hashes = {args.raid_hash}
     else:
         raid_hashes = set(RAIDS.keys())
+
+    name_to_hashes = group_hashes_by_name_ordered(RAIDS)
 
     start = time.perf_counter()
     connector = TCPConnector(limit=0, ttl_dns_cache=300)
@@ -134,31 +168,30 @@ async def main():
         if stat_tasks:
             char_results = await asyncio.gather(*stat_tasks)
 
-        # Aggregation pro Member
         member_totals: Dict[str, Dict[str, Any]] = {}
         for member in members:
             member_totals[member["membershipId"]] = {
                 "membershipId": member["membershipId"],
                 "name": member["name"],
-                # Keys als STRINGS schreiben!
-                "completions": {str(rh): 0 for rh in raid_hashes},
+                "completions": {name: 0 for name in name_to_hashes},
                 "total": 0
             }
 
         for comp_dict, member in zip(char_results, owner_map):
             mt = member_totals[member["membershipId"]]
             for rh, count in comp_dict.items():
-                mt["completions"][str(rh)] += count
+                for name, hashes in name_to_hashes.items():
+                    if rh in hashes:
+                        mt["completions"][name] += count
+                        break
 
-        # total berechnen
         for m in member_totals.values():
             m["total"] = sum(m["completions"].values())
 
         result = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "group_id": args.group_id,
-            # Raids-Block: Keys als STRINGS
-            "raids": {str(rh): {"name": RAIDS.get(rh, f"Raid {rh}")} for rh in raid_hashes},
+            "raids": {name: {"hashes": list(hashes)} for name, hashes in name_to_hashes.items()},
             "members": list(member_totals.values()),
         }
 
@@ -170,3 +203,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
