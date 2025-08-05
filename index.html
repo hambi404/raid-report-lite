@@ -65,7 +65,7 @@
             <tr>
               <th class="text-left px-4 py-3 font-semibold">Name</th>
               <th class="text-right px-4 py-3 font-semibold" id="th-clears">Clears</th>
-              <th class="text-right px-4 py-3 font-semibold hidden" id="th-date">Letzter Clear</th>
+              <th class="text-right px-4 py-3 font-semibold" id="th-date">Letzter Clear</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -240,6 +240,7 @@
           <tr class="border-b border-slate-100 dark:border-slate-800">
             <td class="px-4 py-2 whitespace-nowrap">${escapeHtml(r.name)}</td>
             <td class="px-4 py-2 text-right font-mono">${r.total}</td>
+            <td class="px-4 py-2 text-right text-slate-500 dark:text-slate-400">-</td>
           </tr>
         `).join('');
         $('#count').textContent = `${rows.length} Spieler`;
@@ -258,7 +259,7 @@
         rows = members.map(m => ({
           name: m.name,
           clears: m.completions[hash] || 0,
-          last: m.last_clears?.[hash] || '-'
+          last: m.lastCompletionDate?.[hash] || '-'
         }));
 
         if (search) {

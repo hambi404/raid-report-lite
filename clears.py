@@ -111,29 +111,52 @@ async def get_profile_characters(session: ClientSession, api_key: str, member: D
     chars = list((data["Response"].get("characters", {}).get("data") or {}).keys())
     return member, chars
 
-async def get_raid_activity_dates(session: ClientSession, api_key: str, member: Dict[str, Any], char_id: str, raid_hashes: Set[int], sem: asyncio.Semaphore) -> Dict[int, str]:
-    """Hole den letzten Clear pro Raid (nur Datum)"""
+async def get_char_stats_multi(
+    session: ClientSession,
+    api_key: str,
+    member: Dict[str, Any],
+    char_id: str,
+    raid_hashes: Set[int],
+    sem: asyncio.Semaphore
+) -> Tuple[Dict[int, int], Dict[int, str]]:
     headers = {"X-API-Key": api_key}
-    url = f"{BASE}/Destiny2/{member['membershipType']}/Account/{member['membershipId']}/Character/{char_id}/Stats/Activities/"
-    params = "?count=250&mode=4"
+
+    url_agg = f"{BASE}/Destiny2/{member['membershipType']}/Account/{member['membershipId']}/Character/{char_id}/Stats/AggregateActivityStats/"
     try:
-        data = await fetch_json_retry(session, url + params, headers, sem=sem)
+        data_agg = await fetch_json_retry(session, url_agg, headers, sem=sem)
     except Exception:
-        return {rh: "" for rh in raid_hashes}
+        return {rh: 0 for rh in raid_hashes}, {rh: None for rh in raid_hashes}
 
-    activities = data["Response"].get("activities", []) or []
-    last_dates: Dict[int, str] = {rh: "" for rh in raid_hashes}
+    totals = {rh: 0 for rh in raid_hashes}
+    last_dates = {rh: None for rh in raid_hashes}
+
+    activities = data_agg["Response"].get("activities", []) or []
     for a in activities:
-        rh = a.get("activityDetails", {}).get("referenceId")
-        if rh in raid_hashes and a["values"]["completed"]["basic"]["value"] == 1:
-            dt = datetime.strptime(a["period"], "%Y-%m-%dT%H:%M:%SZ").strftime("%d.%m.%Y")
-            if not last_dates[rh] or dt > last_dates[rh]:
-                last_dates[rh] = dt
-    return last_dates
+        rh = a.get("activityHash")
+        if rh in totals:
+            totals[rh] += int(a["values"]["activityCompletions"]["basic"]["value"])
 
-async def get_char_stats_multi(session: ClientSession, api_key: str, member: Dict[str, Any], char_id: str, raid_hashes: Set[int], sem: asyncio.Semaphore):
-    totals = await get_raid_activity_dates(session, api_key, member, char_id, raid_hashes, sem)
-    return totals
+    url_hist = f"{BASE}/Destiny2/{member['membershipType']}/Account/{member['membershipId']}/Character/{char_id}/Stats/Activities/?mode=4&count=250"
+    try:
+        data_hist = await fetch_json_retry(session, url_hist, headers, sem=sem)
+    except Exception:
+        return totals, last_dates
+
+    hist_acts = data_hist["Response"].get("activities", []) or []
+
+    for act in hist_acts:
+        rh = act["activityDetails"].get("referenceId") or act["activityDetails"].get("activityHash")
+        period = act.get("period")
+        if rh in raid_hashes and period:
+            dt = datetime.fromisoformat(period.replace("Z", "+00:00"))
+            current = last_dates.get(rh)
+            if current is None or dt > current:
+                last_dates[rh] = dt
+
+    for rh, dt in last_dates.items():
+        last_dates[rh] = dt.strftime("%d.%m.%Y") if dt else None
+
+    return totals, last_dates
 
 async def main():
     parser = argparse.ArgumentParser()
@@ -141,9 +164,17 @@ async def main():
     parser.add_argument("--group-id", required=True)
     parser.add_argument("--out", default="results.json")
     parser.add_argument("--concurrency", type=int, default=150)
+    parser.add_argument("--raid-hashes", nargs="*", type=int)
+    parser.add_argument("--raid-hash", type=int)
     args = parser.parse_args()
 
-    raid_hashes = set(RAIDS.keys())
+    if args.raid_hashes:
+        raid_hashes: Set[int] = set(args.raid_hashes)
+    elif args.raid_hash:
+        raid_hashes = {args.raid_hash}
+    else:
+        raid_hashes = set(RAIDS.keys())
+
     name_to_hashes = group_hashes_by_name_ordered(RAIDS)
 
     start = time.perf_counter()
@@ -157,13 +188,13 @@ async def main():
         prof_results = await asyncio.gather(*prof_tasks)
 
         stat_tasks = []
-        owner_map: List[Dict[str, Any]] = []
+        owner_map = []
         for member, chars in prof_results:
             for cid in chars:
                 stat_tasks.append(get_char_stats_multi(session, args.api_key, member, cid, raid_hashes, sem))
                 owner_map.append(member)
 
-        char_results: List[Dict[int, str]] = []
+        char_results = []
         if stat_tasks:
             char_results = await asyncio.gather(*stat_tasks)
 
@@ -173,25 +204,31 @@ async def main():
                 "membershipId": member["membershipId"],
                 "name": member["name"],
                 "completions": {name: 0 for name in name_to_hashes},
-                "last_clear": {name: "" for name in name_to_hashes},
+                "lastCompletionDate": {name: None for name in name_to_hashes},
                 "total": 0
             }
 
-        for comp_dict, member in zip(char_results, owner_map):
+        for (comp_dict, last_dates_dict), member in zip(char_results, owner_map):
             mt = member_totals[member["membershipId"]]
-            for rh, date in comp_dict.items():
+            for rh, count in comp_dict.items():
                 for name, hashes in name_to_hashes.items():
                     if rh in hashes:
-                        mt["completions"][name] += 1
-                        if date and (not mt["last_clear"][name] or date > mt["last_clear"][name]):
-                            mt["last_clear"][name] = date
+                        mt["completions"][name] += count
+                        new_date = last_dates_dict.get(rh)
+                        old_date = mt["lastCompletionDate"].get(name)
+                        if new_date:
+                            if old_date is None or datetime.strptime(new_date, "%d.%m.%Y") > datetime.strptime(old_date, "%d.%m.%Y"):
+                                mt["lastCompletionDate"][name] = new_date
                         break
 
         for m in member_totals.values():
             m["total"] = sum(m["completions"].values())
 
         raids_with_name = {
-            name: {"name": name, "hashes": list(hashes)}
+            name: {
+                "name": name,
+                "hashes": list(hashes)
+            }
             for name, hashes in name_to_hashes.items()
         }
 
